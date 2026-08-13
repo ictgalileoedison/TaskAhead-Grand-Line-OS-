@@ -1901,16 +1901,34 @@ async function loadAllData() {
     window.xp = gameData.xp;
     const profile = await ProfileRepository.get(currentUserId);
     window.profile = profile;
+
+    // ⚡ ADDED: Load Notes, Schedules, and Subjects from IndexedDB
+    if (typeof NoteRepository !== 'undefined') {
+      window.notes = await NoteRepository.get(currentUserId);
+    }
+    if (typeof ScheduleRepository !== 'undefined') {
+      window.schedules = await ScheduleRepository.getAll(currentUserId);
+    }
+    if (typeof SubjectRepository !== 'undefined') {
+      window.subjects = await SubjectRepository.getAll(currentUserId);
+    }
+
     console.log('✅ All data loaded');
   } catch (error) {
     console.error('❌ Error loading data:', error);
   }
 }
+
 function refreshAllUI() {
   refreshPlant();
   renderTasks();
   refreshGlance();
   updateProfileUI();
+
+  // ⚡ ADDED: Trigger UI rendering for Notes, Schedules, and Subjects
+  if (typeof renderNotes === 'function') renderNotes();
+  if (typeof renderSchedule === 'function') renderSchedule();
+  if (typeof renderSubjects === 'function') renderSubjects();
 }
 
 // ============ SCHEDULE SAVE/LOAD ============
