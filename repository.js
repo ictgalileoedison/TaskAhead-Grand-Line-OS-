@@ -84,3 +84,18 @@ const ProfileRepository = {
     return profile;
   }
 };
+
+  const ScheduleRepository = {
+  // Save schedule linked to current account
+  async save(userId, scheduleData) {
+    if (!userId) return;
+    return await db.put('schedules', { userId: userId, data: scheduleData });
+  },
+
+  // Get schedule for current account
+  async get(userId) {
+    if (!userId) return null;
+    const record = await db.get('schedules', userId);
+    return record ? record.data : null;
+  }
+};
