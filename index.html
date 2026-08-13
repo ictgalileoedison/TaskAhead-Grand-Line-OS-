@@ -1902,12 +1902,19 @@ async function loadAllData() {
     const profile = await ProfileRepository.get(currentUserId);
     window.profile = profile;
 
-    // ⚡ ADDED: Load Notes, Schedules, and Subjects from IndexedDB
+    // ⚡ Load Schedule, Notes, and Subjects
+    if (currentUserId && typeof ScheduleRepository !== 'undefined') {
+      const savedScheduleData = await ScheduleRepository.get(currentUserId);
+      if (savedScheduleData) {
+        const scheduleContainer = document.querySelector('.schedule-grid');
+        if (scheduleContainer) {
+          scheduleContainer.innerHTML = savedScheduleData;
+        }
+      }
+    }
+
     if (typeof NoteRepository !== 'undefined') {
       window.notes = await NoteRepository.get(currentUserId);
-    }
-    if (typeof ScheduleRepository !== 'undefined') {
-      window.schedules = await ScheduleRepository.getAll(currentUserId);
     }
     if (typeof SubjectRepository !== 'undefined') {
       window.subjects = await SubjectRepository.getAll(currentUserId);
@@ -1925,12 +1932,11 @@ function refreshAllUI() {
   refreshGlance();
   updateProfileUI();
 
-  // ⚡ ADDED: Trigger UI rendering for Notes, Schedules, and Subjects
+  // Trigger UI rendering for Notes, Schedules, and Subjects
   if (typeof renderNotes === 'function') renderNotes();
   if (typeof renderSchedule === 'function') renderSchedule();
   if (typeof renderSubjects === 'function') renderSubjects();
 }
-
 // ============ SCHEDULE SAVE/LOAD ============
 async function saveSchedule() {
   try {
@@ -3763,10 +3769,29 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 // END PIRATE BGM
 // ============================================
+// Find your save button
+const saveScheduleBtn = document.querySelector('.btn-primary') || document.getElementById('save-schedule-btn');
 
-// ============================================
-// END OF AUTHENTICATION SYSTEM
-// ============================================
+saveScheduleBtn?.addEventListener('click', async () => {
+  // Check if user is logged in
+  if (!currentUserId) {
+    alert("Please log in or register an account first to save your schedule!");
+    return;
+  }
+
+  // Get the HTML content of the schedule cards
+  const scheduleContainer = document.querySelector('.schedule-grid') || document.body; 
+  
+  // Save to database via ScheduleRepository
+  try {
+    await ScheduleRepository.save(currentUserId, scheduleContainer.innerHTML);
+    alert("Schedule saved successfully to your account! ⚓");
+  } catch (err) {
+    console.error("Failed to save schedule:", err);
+    alert("Error saving schedule. Check browser console.");
+  }
+});
+    
 </script>
 
 </body>
