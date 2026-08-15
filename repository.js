@@ -1,5 +1,5 @@
 // ============================================
-// repository.js — Data Access Layer
+// repository.js — Data Access Layer (FIXED)
 // ============================================
 
 const TaskRepository = {
@@ -17,15 +17,15 @@ const TaskRepository = {
   async toggleStatus(taskId) {
     const tx = db.instance.transaction('tasks', 'readwrite');
     const store = tx.objectStore('tasks');
-    
+
     return new Promise((resolve, reject) => {
       const getReq = store.get(taskId);
       getReq.onsuccess = () => {
         const task = getReq.result;
         if (!task) return reject(new Error('Task not found'));
-        
+
         task.status = task.status === 'done' ? 'pending' : 'done';
-        
+
         const putReq = store.put(task);
         putReq.onsuccess = () => resolve(task);
         putReq.onerror = () => reject(putReq.error);
@@ -85,17 +85,28 @@ const ProfileRepository = {
   }
 };
 
-  const ScheduleRepository = {
-  // Save schedule linked to current account
-  async save(userId, scheduleData) {
-    if (!userId) return;
-    return await db.put('schedules', { userId: userId, data: scheduleData });
+// FIXED: ScheduleRepository now uses consistent {userId, days} format
+const ScheduleRepository = {
+  async save(userId, daysData) {
+    if (!userId) throw new Error('User ID required');
+    return await db.put('schedules', { userId: userId, days: daysData });
   },
 
-  // Get schedule for current account
   async get(userId) {
     if (!userId) return null;
-    const record = await db.get('schedules', userId);
-    return record ? record.data : null;
+    return await db.get('schedules', userId);
+  }
+};
+
+// NEW: SubjectRepository for consistency
+const SubjectRepository = {
+  async save(userId, termsData) {
+    if (!userId) throw new Error('User ID required');
+    return await db.put('subjects', { userId: userId, terms: termsData });
+  },
+
+  async get(userId) {
+    if (!userId) return null;
+    return await db.get('subjects', userId);
   }
 };
