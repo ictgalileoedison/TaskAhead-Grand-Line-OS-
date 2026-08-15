@@ -1,9 +1,9 @@
 // ============================================
-// database.js — IndexedDB Engine
+// database.js — IndexedDB Engine (FIXED)
 // ============================================
 
 const DB_NAME = 'TaskAheadDB';
-const DB_VERSION = 3; // Bumped for schedules & subjects
+const DB_VERSION = 4; // Bumped to force clean store creation
 
 const db = {
   instance: null,
@@ -15,7 +15,16 @@ const db = {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         this.instance = request.result;
+        // Handle version changes from other tabs
+        this.instance.onversionchange = () => {
+          this.instance.close();
+          location.reload();
+        };
         resolve(this.instance);
+      };
+
+      request.onblocked = () => {
+        reject(new Error('Database blocked. Please close other tabs using this app and reload.'));
       };
 
       request.onupgradeneeded = (event) => {
@@ -40,7 +49,6 @@ const db = {
           database.createObjectStore('profiles', { keyPath: 'userId' });
         }
 
-        // NEW stores for schedule & subjects
         if (!database.objectStoreNames.contains('schedules')) {
           database.createObjectStore('schedules', { keyPath: 'userId' });
         }
@@ -54,6 +62,7 @@ const db = {
   add(storeName, data) {
     return new Promise((resolve, reject) => {
       const tx = this.instance.transaction(storeName, 'readwrite');
+      tx.onerror = () => reject(tx.error);
       const store = tx.objectStore(storeName);
       const request = store.add(data);
       request.onsuccess = () => resolve(request.result);
@@ -64,6 +73,7 @@ const db = {
   get(storeName, key) {
     return new Promise((resolve, reject) => {
       const tx = this.instance.transaction(storeName, 'readonly');
+      tx.onerror = () => reject(tx.error);
       const store = tx.objectStore(storeName);
       const request = store.get(key);
       request.onsuccess = () => resolve(request.result);
@@ -74,6 +84,7 @@ const db = {
   getAll(storeName) {
     return new Promise((resolve, reject) => {
       const tx = this.instance.transaction(storeName, 'readonly');
+      tx.onerror = () => reject(tx.error);
       const store = tx.objectStore(storeName);
       const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
@@ -84,6 +95,7 @@ const db = {
   put(storeName, data) {
     return new Promise((resolve, reject) => {
       const tx = this.instance.transaction(storeName, 'readwrite');
+      tx.onerror = () => reject(tx.error);
       const store = tx.objectStore(storeName);
       const request = store.put(data);
       request.onsuccess = () => resolve(request.result);
@@ -94,6 +106,7 @@ const db = {
   delete(storeName, key) {
     return new Promise((resolve, reject) => {
       const tx = this.instance.transaction(storeName, 'readwrite');
+      tx.onerror = () => reject(tx.error);
       const store = tx.objectStore(storeName);
       const request = store.delete(key);
       request.onsuccess = () => resolve();
