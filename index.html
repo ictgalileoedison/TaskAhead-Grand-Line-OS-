@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="style.css">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
     <style>
@@ -1221,13 +1222,6 @@ body.force-mobile .timer-page-grid { grid-template-columns: 1fr !important; widt
             </button>
           </li>
         </ul>
-                  </li>
-          <li style="padding: 10px 10px 6px; list-style: none;">
-            <button class="btn btn-primary" id="save-subjects-btn" style="width:100%; justify-content:center; font-size:12px; padding:8px; gap:6px;">
-              <i class="fa-solid fa-floppy-disk"></i> Save Subjects
-            </button>
-          </li>
-        </ul>
       </li>
       <li><a href="#" class="nav-btn" data-target="schedule-section"><i class="fa-solid fa-calendar-days"></i> Class Schedule</a></li>
       <li><a href="#" class="nav-btn" data-target="tasks"><i class="fa-solid fa-list-check"></i> Tasks &amp; Deadlines</a></li>
@@ -1264,7 +1258,7 @@ body.force-mobile .timer-page-grid { grid-template-columns: 1fr !important; widt
       <span class="hero-sparkle" style="top:16px; left:46%;">⚔️</span>
       <span class="hero-sparkle" style="top:60%; left:8%; animation-delay:.8s;">☠️</span>
       <div class="hero-left">
-        <span class="system-tag"></span> System status: Mainframe Online ⚡</span>
+        <span class="system-tag">System status: Mainframe Online ⚡</span>
         <h1> System online, future net-runner! ⚔️</h1>
         <p class="hero-quote" id="motivational-quote">"Code your loot daily and watch your whole digital empire upload."</p>
         <div class="hero-actions">
@@ -1278,7 +1272,7 @@ body.force-mobile .timer-page-grid { grid-template-columns: 1fr !important; widt
 
           <div class="plant-stats">
 
-            <h4>Bounty: <span id="rank-name" class="text-pink> East Blue Rookie</span></h4>
+            <h4>Bounty: <span id="rank-name" class="text-pink"> East Blue Rookie</span></h4>
 
             <p>Level Score: <span id="rank-points">0</span> XP</p>
 
@@ -1904,21 +1898,16 @@ body.force-mobile .timer-page-grid { grid-template-columns: 1fr !important; widt
 
 <div class="toast" id="toast"></div>
 
-<button class="music-float-btn" id="music-toggle-btn" title="Toggle Pirate Music 🎵">
-  <i class="fa-solid fa-music"></i>
-</button>
-
 <script src="database.js"></script>
 <script src="models.js"></script>
 <script src="repository.js"></script>
-<script src="script.js"></script>
 
 <script>
     // ============================================
 // DATABASE INITIALIZATION
 // ============================================
 
-currentUserId = 'default-user';
+let currentUserId = 'default-user';
 
 async function initApp() {
   try {
@@ -1943,22 +1932,15 @@ async function loadAllData() {
     const profile = await ProfileRepository.get(currentUserId);
     window.profile = profile;
 
-    // ⚡ Load Schedule, Notes, and Subjects
-    if (currentUserId && typeof ScheduleRepository !== 'undefined') {
-      const savedScheduleData = await ScheduleRepository.get(currentUserId);
-      if (savedScheduleData) {
-        const scheduleContainer = document.querySelector('.schedule-grid');
-        if (scheduleContainer) {
-          scheduleContainer.innerHTML = savedScheduleData;
-        }
-      }
-    }
-
+    // ⚡ Load Notes and Subjects
     if (typeof NoteRepository !== 'undefined') {
-      window.notes = await NoteRepository.get(currentUserId);
+      try { window.notes = await NoteRepository.get(currentUserId); } catch(e) {}
     }
     if (typeof SubjectRepository !== 'undefined') {
-      window.subjects = await SubjectRepository.getAll(currentUserId);
+      try { 
+        const subjData = await SubjectRepository.get(currentUserId);
+        window.subjects = subjData ? subjData.terms : [];
+      } catch(e) { window.subjects = []; }
     }
 
     console.log('✅ All data loaded');
@@ -1972,211 +1954,12 @@ function refreshAllUI() {
   renderTasks();
   refreshGlance();
   updateProfileUI();
-}
-
-// ============ SCHEDULE SAVE/LOAD (per user) ============
-async function saveSchedule() {
-  try {
-    const days = [];
-    document.querySelectorAll('.schedule-day-card').forEach(card => {
-      const dayName = card.querySelector('.day-header')?.textContent.trim() || '';
-      const blocks = [];
-      card.querySelectorAll('.schedule-blocks li').forEach(li => {
-        const isBreak = li.classList.contains('noon-break');
-        if (isBreak) {
-          blocks.push({ time: '', subject: li.textContent.trim(), isBreak: true });
-        } else {
-          const time = li.querySelector('.time')?.textContent.trim() || '';
-          const subject = li.querySelector('strong')?.textContent.trim() || '';
-          blocks.push({ time, subject, isBreak: false });
-        }
-      });
-      days.push({ day: dayName, blocks });
-    });
-    await db.put('schedules', { userId: currentUserId, days });
-    showToast('📅 Schedule saved!');
-  } catch (error) {
-    console.error('❌ Error saving schedule:', error);
-    showToast('Error saving schedule');
-  }
-}
-
-async function loadSchedule() {
-  try {
-    const data = await db.get('schedules', currentUserId);
-    if (!data || !data.days) return;
-    const cards = document.querySelectorAll('.schedule-day-card');
-    data.days.forEach((dayData, index) => {
-      const card = cards[index];
-      if (!card) return;
-      const header = card.querySelector('.day-header');
-      if (header) header.textContent = dayData.day;
-      const list = card.querySelector('.schedule-blocks');
-      if (!list) return;
-      list.innerHTML = '';
-      dayData.blocks.forEach(block => {
-        const li = document.createElement('li');
-        if (block.isBreak) {
-          li.className = 'noon-break';
-          li.setAttribute('contenteditable', 'true');
-          li.textContent = block.subject;
-        } else {
-          li.innerHTML = `<span class="time" contenteditable="true">${block.time}</span><strong contenteditable="true">${block.subject}</strong>`;
-        }
-        list.appendChild(li);
-      });
-    });
-  } catch (error) {
-    console.error('❌ Error loading schedule:', error);
-  }
-}
-
-// ============ SUBJECTS SAVE/LOAD (per user) ============
-async function saveSubjects() {
-  try {
-    const terms = [];
-    document.querySelectorAll('#academicsMenu > .nested-dropdown').forEach(termEl => {
-      const termName = termEl.querySelector('.term-title')?.textContent.trim() || '';
-      const subjects = [];
-      termEl.querySelectorAll('.subject-list li').forEach(li => {
-        subjects.push(li.textContent.trim());
-      });
-      terms.push({ name: termName, subjects });
-    });
-    await db.put('subjects', { userId: currentUserId, terms });
-    showToast('📚 Subjects saved!');
-  } catch (error) {
-    console.error('❌ Error saving subjects:', error);
-    showToast('Error saving subjects');
-  }
-}
-
-async function loadSubjects() {
-  try {
-    const data = await db.get('subjects', currentUserId);
-    if (!data || !data.terms) return;
-    const termEls = document.querySelectorAll('#academicsMenu > .nested-dropdown');
-    data.terms.forEach((termData, index) => {
-      const termEl = termEls[index];
-      if (!termEl) return;
-      const title = termEl.querySelector('.term-title');
-      if (title) title.textContent = termData.name;
-      const list = termEl.querySelector('.subject-list');
-      if (!list) return;
-      list.innerHTML = '';
-      termData.subjects.forEach(subj => {
-        const li = document.createElement('li');
-        li.setAttribute('contenteditable', 'true');
-        li.textContent = subj;
-        list.appendChild(li);
-      });
-    });
-  } catch (error) {
-    console.error('❌ Error loading subjects:', error);
-  }
-}
-
-// ============ PIRATE BACKGROUND MUSIC (procedural loop) ============
-const PirateMusic = {
-  ctx: null,
-  isPlaying: false,
-  nextNoteTime: 0,
-  noteIndex: 0,
-  tempo: 90,
-  timerID: null,
-  
-  melody: [
-    {n:'E4',d:0.5}, {n:'G4',d:0.5}, {n:'A4',d:0.5}, {n:'G4',d:0.5},
-    {n:'E4',d:0.5}, {n:'D4',d:0.5}, {n:'E4',d:1.0},
-    {n:'G4',d:0.5}, {n:'A4',d:0.5}, {n:'B4',d:0.5}, {n:'A4',d:0.5},
-    {n:'G4',d:0.5}, {n:'E4',d:0.5}, {n:'E4',d:1.0}
-  ],
-  
-  noteFreq(note) {
-    const map = {'C4':261.63,'D4':293.66,'E4':329.63,'F4':349.23,'G4':392.00,'A4':440.00,'B4':493.88,'C5':523.25,'D5':587.33,'E5':659.25,'E3':164.81};
-    return map[note] || 440;
-  },
-  
-  init() {
-    if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-  },
-  
-  toggle() {
-    this.init();
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    this.isPlaying = !this.isPlaying;
-    const btn = document.getElementById('music-toggle-btn');
-    if (this.isPlaying) {
-      this.nextNoteTime = this.ctx.currentTime + 0.05;
-      this.noteIndex = 0;
-      this.scheduler();
-      if (btn) { btn.style.opacity = '1'; btn.style.transform = 'scale(1.1)'; btn.style.background = 'var(--mint)'; }
-      showToast('🎵 Pirate music ON!');
-    } else {
-      clearTimeout(this.timerID);
-      if (btn) { btn.style.opacity = '0.7'; btn.style.transform = 'scale(1)'; btn.style.background = 'var(--pink)'; }
-      showToast('🎵 Music paused');
-    }
-  },
-  
-  scheduler() {
-    while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
-      this.scheduleNote(this.noteIndex, this.nextNoteTime);
-      const note = this.melody[this.noteIndex];
-      this.nextNoteTime += (60 / this.tempo) * note.d;
-      this.noteIndex = (this.noteIndex + 1) % this.melody.length;
-    }
-    if (this.isPlaying) {
-      this.timerID = setTimeout(() => this.scheduler(), 25);
-    }
-  },
-  
-  scheduleNote(idx, time) {
-    const note = this.melody[idx];
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = this.noteFreq(note.n);
-    gain.gain.setValueAtTime(0.06, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.35);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(time);
-    osc.stop(time + 0.4);
-    
-    if (idx === 0 || idx === 6) {
-      const bass = this.ctx.createOscillator();
-      const bassGain = this.ctx.createGain();
-      bass.type = 'sine';
-      bass.frequency.value = this.noteFreq('E3');
-      bassGain.gain.setValueAtTime(0.12, time);
-      bassGain.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
-      bass.connect(bassGain);
-      bassGain.connect(this.ctx.destination);
-      bass.start(time);
-      bass.stop(time + 0.6);
-    }
-  }
-};
-
-// Start app when page loads
-document.addEventListener('DOMContentLoaded', initApp);
-
-/* Save & Music button listeners */
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('save-schedule-btn')?.addEventListener('click', saveSchedule);
-  document.getElementById('save-subjects-btn')?.addEventListener('click', saveSubjects);
-  document.getElementById('music-toggle-btn')?.addEventListener('click', () => PirateMusic.toggle());
-});
 
   // Trigger UI rendering for Notes, Schedules, and Subjects
   if (typeof renderNotes === 'function') renderNotes();
   if (typeof renderSchedule === 'function') renderSchedule();
   if (typeof renderSubjects === 'function') renderSubjects();
-
-
+}
 // ============ SCHEDULE SAVE/LOAD ============
 async function saveSchedule() {
   try {
@@ -2196,7 +1979,7 @@ async function saveSchedule() {
       });
       days.push({ day: dayName, blocks });
     });
-    await db.put('schedules', { userId: currentUserId, days });
+    await ScheduleRepository.save(currentUserId, days);
     showToast('📅 Schedule saved!');
   } catch (error) {
     console.error('❌ Error saving schedule:', error);
@@ -2206,7 +1989,7 @@ async function saveSchedule() {
 
 async function loadSchedule() {
   try {
-    const data = await db.get('schedules', currentUserId);
+    const data = await ScheduleRepository.get(currentUserId);
     if (!data || !data.days) return;
     const cards = document.querySelectorAll('.schedule-day-card');
     data.days.forEach((dayData, index) => {
@@ -2246,7 +2029,7 @@ async function saveSubjects() {
       });
       terms.push({ name: termName, subjects });
     });
-    await db.put('subjects', { userId: currentUserId, terms });
+    await SubjectRepository.save(currentUserId, terms);
     showToast('📚 Subjects saved!');
   } catch (error) {
     console.error('❌ Error saving subjects:', error);
@@ -2256,7 +2039,7 @@ async function saveSubjects() {
 
 async function loadSubjects() {
   try {
-    const data = await db.get('subjects', currentUserId);
+    const data = await SubjectRepository.get(currentUserId);
     if (!data || !data.terms) return;
     const termEls = document.querySelectorAll('#academicsMenu > .nested-dropdown');
     data.terms.forEach((termData, index) => {
@@ -3228,9 +3011,7 @@ async function loginUser(username, password) {
     isLoggedIn = true;
     currentUserId = username;
 
-       await loadAllData();
-    await loadSchedule();
-    await loadSubjects();
+    await loadAllData();
     refreshAllUI();
     updateAuthUI();
 
@@ -3246,11 +3027,9 @@ async function loginUser(username, password) {
 async function logoutUser() {
   currentUser = null;
   isLoggedIn = false;
-  currentUserId = 'default-user';
+  let currentUserId = 'default-user';
 
-   await loadAllData();
-  await loadSchedule();
-  await loadSubjects();
+  await loadAllData();
   refreshAllUI();
   updateAuthUI();
 
@@ -4013,28 +3792,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 // END PIRATE BGM
 // ============================================
-// Find your save button
-const saveScheduleBtn = document.querySelector('.btn-primary') || document.getElementById('save-schedule-btn');
 
-saveScheduleBtn?.addEventListener('click', async () => {
-  // Check if user is logged in
-  if (!currentUserId) {
-    alert("Please log in or register an account first to save your schedule!");
-    return;
-  }
-
-  // Get the HTML content of the schedule cards
-  const scheduleContainer = document.querySelector('.schedule-grid') || document.body; 
-  
-  // Save to database via ScheduleRepository
-  try {
-    await ScheduleRepository.save(currentUserId, scheduleContainer.innerHTML);
-    alert("Schedule saved successfully to your account! ⚓");
-  } catch (err) {
-    console.error("Failed to save schedule:", err);
-    alert("Error saving schedule. Check browser console.");
-  }
-});
     
 </script>
 
